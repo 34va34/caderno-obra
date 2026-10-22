@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Caderno de Obra</title>
+<meta name="description" content="Caderno de obra digital: dita, organiza e envia as encomendas por WhatsApp." />
+<meta name="theme-color" content="#f3f4f7" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icone.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="styles.css" />
+<script>
+  // aplica o tema antes do primeiro desenho (evita flash)
+  try {
+    document.documentElement.dataset.tema = localStorage.getItem('caderno-obra-tema') || 'auto';
+  } catch (e) {
+    document.documentElement.dataset.tema = 'auto';
+  }
+  try {
+    var temaUrl = new URLSearchParams(location.search).get('tema');
+    if (temaUrl) document.documentElement.dataset.tema = temaUrl;
+  } catch (e) {}
+</script>
+</head>
+<body>
+  <div class="app">
+    <header id="topo" class="topo"></header>
+    <main id="vista" class="vista"></main>
+    <nav id="barra" class="barra" aria-label="Navegação"></nav>
+  </div>
+
+  <div id="modal" class="modal escondido" aria-hidden="true">
+    <div class="modal-fundo" data-fechar></div>
+    <div class="modal-caixa" role="dialog" aria-modal="true">
+      <div id="modal-conteudo"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <noscript>
+    <p style="padding:1rem">Esta app precisa de JavaScript ativo.</p>
+  </noscript>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

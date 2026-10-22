@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Caderno de Obra">
+  <rect width="512" height="512" rx="112" fill="#0f172a"/>
+  <rect x="102" y="87" width="308" height="338" rx="26" fill="#f8fafc"/>
+  <rect x="102" y="87" width="36" height="338" rx="16" fill="#ea580c"/>
+  <rect x="174" y="169" width="196" height="18" rx="9" fill="#334155"/>
+  <rect x="174" y="230" width="196" height="18" rx="9" fill="#334155"/>
+  <rect x="174" y="291" width="140" height="18" rx="9" fill="#334155"/>
+  <path d="M246 358l26 30 46-56" fill="none" stroke="#15803d" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
