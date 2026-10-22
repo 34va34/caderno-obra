@@ -33,7 +33,8 @@ function ips() {
 
 const servidor = http.createServer((req, res) => {
   const url = decodeURIComponent((req.url || '/').split('?')[0]);
-  let relativo = url === '/' ? 'index.html' : url.replace(/^\/+/, '');
+  let relativo = url.replace(/^\/+/, '');
+  if (relativo === '' || relativo.endsWith('/')) relativo += 'index.html';
   const ficheiro = path.join(RAIZ, relativo);
 
   if (!ficheiro.startsWith(RAIZ)) {
