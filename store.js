@@ -299,6 +299,7 @@ export function criarEncomenda(db, { obraId, localId, data, itens, texto }) {
       qtd: i.qtd,
       unidade: i.unidade,
       familia: i.familia,
+      localId: i.localId ?? null,
       qtdExplicita: i.qtdExplicita
     }))
   };

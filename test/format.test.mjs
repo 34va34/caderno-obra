@@ -64,3 +64,31 @@ test('textoEncomenda: termina com uma única quebra de linha', () => {
   });
   assert.match(texto, /[^\n]\n$/);
 });
+
+test('textoEncomenda: itens de locais diferentes indicam o local em cada linha', () => {
+  const texto = textoEncomenda({
+    obra: 'Obra',
+    local: { lote: '1A', bloco: 'A', piso: '2' },
+    data: '2026-10-27',
+    itens: [
+      { nome: 'Cimento', familia: '', qtd: 1, unidade: 'un', qtdExplicita: false, local: { lote: '1A', bloco: 'A', piso: '2' } },
+      { nome: 'Tubo', familia: 'PPR', qtd: 4, unidade: 'un', qtdExplicita: true, local: { lote: '3A', bloco: 'B', piso: '0' } }
+    ]
+  });
+  const linhas = texto.split('\n');
+  assert.equal(linhas[0], 'Obra');
+  assert.ok(texto.includes('- Tubo — 4 un (Lote 3A · Bloco B · Piso 0)'));
+  assert.ok(texto.includes('- Cimento (Lote 1A · Bloco A · Piso 2)'));
+});
+
+test('textoEncomenda: itens do mesmo local mostram o local só no cabeçalho', () => {
+  const local = { lote: '1A', bloco: 'A', piso: '2' };
+  const texto = textoEncomenda({
+    obra: 'Obra',
+    local,
+    data: '2026-10-27',
+    itens: [{ nome: 'Tubo', familia: 'PPR', qtd: 4, unidade: 'un', qtdExplicita: true, local }]
+  });
+  assert.equal(texto.split('\n')[0], 'Obra · Lote 1A · Bloco A · Piso 2');
+  assert.ok(!texto.includes('(Lote'));
+});

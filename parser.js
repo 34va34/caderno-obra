@@ -160,7 +160,7 @@ export function detectarFamilia(texto) {
   if (/\bppr\b/.test(n)) return 'PPR';
   if (/\bpvc\b/.test(n)) return 'PVC';
   if (/\besgotos?\b/.test(n)) return 'Esgotos';
-  if (/\bpluviais?\b/.test(n) || /\blaranja\b/.test(n)) return 'Pluviais';
+  if (/\bpluvia(?:l|is)\b/.test(n) || /\blaranja\b/.test(n)) return 'Pluviais';
   if (/\babracadeiras?\b/.test(n)) return 'Abraçadeiras';
   if (/\bisolamentos?\b/.test(n)) return 'Isolamento';
   if (/\baguas?\b/.test(n)) return 'Águas';

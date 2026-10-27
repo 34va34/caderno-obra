@@ -456,6 +456,10 @@ function vistaPreciso() {
   `;
 }
 
+function itensComLocal(itens) {
+  return itens.map((r) => ({ ...r, local: store.localPorId(db, r.localId) }));
+}
+
 function gerarEncomenda() {
   const { obra, local } = contexto();
   if (!obra) return;
@@ -467,7 +471,7 @@ function gerarEncomenda() {
     toast('Seleciona primeiro o que falta');
     return;
   }
-  const texto = textoEncomenda({ obra: obra.nome, local, data: hojeISO(), itens });
+  const texto = textoEncomenda({ obra: obra.nome, local, data: hojeISO(), itens: itensComLocal(itens) });
 
   abrirModal(`
     <button class="modal-fechar" data-acao="fechar" aria-label="Fechar">${icone('fechar', { tamanho: 17 })}</button>
@@ -496,7 +500,7 @@ function marcarPedido() {
     .filter(Boolean)
     .sort((a, b) => a.ts - b.ts);
   if (!itens.length) return;
-  const texto = window.__textoEncomenda || textoEncomenda({ obra: obra.nome, local, data: hojeISO(), itens });
+  const texto = window.__textoEncomenda || textoEncomenda({ obra: obra.nome, local, data: hojeISO(), itens: itensComLocal(itens) });
   store.criarEncomenda(db, { obraId: obra.id, localId: local ? local.id : null, data: hojeISO(), itens, texto });
   selecionados.clear();
   fecharModal();
