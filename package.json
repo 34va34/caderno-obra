@@ -6,8 +6,7 @@
   "description": "Caderno de obra digital — substitui o caderno de papel. Offline, dados no telemovel.",
   "scripts": {
     "start": "node serve.mjs",
-    "test": "node test/parser.test.mjs && node test/app.smoke.mjs",
-    "test:parser": "node test/parser.test.mjs",
-    "test:app": "node test/app.smoke.mjs"
+    "test": "node --test test/store.test.mjs test/format.test.mjs test/sw.test.mjs",
+    "test:sw": "node --test test/sw.test.mjs"
   }
 }

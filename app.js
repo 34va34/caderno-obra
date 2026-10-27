@@ -55,6 +55,7 @@ const PALAVRAS_SEM_INFO = new Set([
   'kg', 'caixa', 'caixas', 'piso', 'bloco', 'lote', 'com', 'por', 'que', 'ja', 'mais', 'menos', 'cm', 'mm', 'todos', 'todas'
 ]);
 
+store.definirAvisoGravacao(() => toast('Não foi possível gravar. Exporta uma cópia de segurança em Mais.'));
 let db = store.carregar();
 let tipoForcado = '';
 let selecionados = new Set();
@@ -137,7 +138,7 @@ function selosEstado(r, { familia = true } = {}) {
   const partes = [];
   if (familia && r.familia) partes.push(`<span class="selo familia">${esc(r.familia)}</span>`);
   if (r.estado && ROTULO_ESTADO[r.estado]) {
-    partes.push(`<span class="selo ${r.estado}">${esc(ROTULO_ESTADO[r.estado])}</span>`);
+    partes.push(`<span class="selo ${esc(r.estado)}">${esc(ROTULO_ESTADO[r.estado])}</span>`);
   }
   return partes.join(' ');
 }
@@ -221,10 +222,10 @@ function linhaRegisto(r, { checkbox = false, semFamilia = false, acoes = '' } = 
   const nome = r.tipo === 'nota' && r.cotaAssunto ? r.cotaAssunto : r.nome || r.texto;
   const extra = textoExtra(r);
   return `
-    <div class="linha t-${r.tipo} tocavel ${r.estado === 'anulado' ? 'anulado' : ''}" data-acao="editar-registo" data-id="${r.id}">
+    <div class="linha t-${esc(r.tipo)} tocavel ${r.estado === 'anulado' ? 'anulado' : ''}" data-acao="editar-registo" data-id="${esc(r.id)}">
       ${
         checkbox
-          ? `<input type="checkbox" data-selecao="${r.id}" ${selecionados.has(r.id) ? 'checked' : ''} aria-label="Selecionar" />`
+          ? `<input type="checkbox" data-selecao="${esc(r.id)}" ${selecionados.has(r.id) ? 'checked' : ''} aria-label="Selecionar" />`
           : `<div class="tipo-icone">${ICONE_TIPO[r.tipo] || ICONE_TIPO.nota}</div>`
       }
       <div class="corpo">
@@ -348,12 +349,12 @@ function modalRegisto(id) {
 
     <div class="acoes-linha">
       <button class="btn sec" data-acao="fechar">Fechar</button>
-      <button class="btn perigo" data-acao="apagar-registo" data-id="${r.id}">Apagar</button>
+      <button class="btn perigo" data-acao="apagar-registo" data-id="${esc(r.id)}">Apagar</button>
     </div>
     <div class="acoes-linha">
-      <button class="btn largo" data-acao="guardar-registo" data-id="${r.id}">Guardar</button>
+      <button class="btn largo" data-acao="guardar-registo" data-id="${esc(r.id)}">Guardar</button>
     </div>
-    ${r.tipo === 'ferramenta' ? `<div class="acoes-linha"><button class="btn sec largo" data-acao="para-ferramentas" data-id="${r.id}">Guardar em Ferramentas</button></div>` : ''}
+    ${r.tipo === 'ferramenta' ? `<div class="acoes-linha"><button class="btn sec largo" data-acao="para-ferramentas" data-id="${esc(r.id)}">Guardar em Ferramentas</button></div>` : ''}
   `);
 }
 
@@ -519,11 +520,11 @@ function vistaEncomendas() {
       <div class="cartao">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
           <span class="forte">${esc(fmtData(e.data))} · ${e.itens.length} linha${e.itens.length === 1 ? '' : 's'}</span>
-          <span class="selo ${e.estado}">${esc(ROTULO_ESTADO[e.estado] || e.estado)}</span>
+          <span class="selo ${esc(e.estado)}">${esc(ROTULO_ESTADO[e.estado] || e.estado)}</span>
         </div>
         <p class="meta" style="margin:4px 0 0">${local ? esc(fmtLocal(local)) : ''}${e.dataEntrega ? ' · entregue ' + esc(fmtData(e.dataEntrega)) : ''}</p>
         <details><summary>Ver texto enviado</summary><pre class="pre-texto">${esc(e.texto)}</pre></details>
-        ${e.estado === 'pedido' ? `<div class="acoes-linha"><button class="btn sec largo" data-acao="marcar-entrada" data-id="${e.id}">${icone('check', { tamanho: 18 })} Já chegou — marcar entrada</button></div>` : ''}
+        ${e.estado === 'pedido' ? `<div class="acoes-linha"><button class="btn sec largo" data-acao="marcar-entrada" data-id="${esc(e.id)}">${icone('check', { tamanho: 18 })} Já chegou — marcar entrada</button></div>` : ''}
       </div>`;
     })
     .join('');
@@ -546,7 +547,7 @@ function vistaMedidas() {
       const local = store.localPorId(db, r.localId);
       const assunto = r.cotaAssunto || r.texto;
       return `
-      <div class="linha t-nota tocavel" data-acao="editar-registo" data-id="${r.id}">
+      <div class="linha t-nota tocavel" data-acao="editar-registo" data-id="${esc(r.id)}">
         <div class="tipo-icone">${icone('medidas', { tamanho: 18 })}</div>
         <div class="corpo">
           <div class="nome">${esc(assunto)}</div>
@@ -593,7 +594,7 @@ function vistaFerramentas() {
         <div class="lista">${itens
           .map(
             (f) => `
-          <div class="linha t-ferramenta tocavel" data-acao="editar-ferramenta" data-id="${f.id}">
+          <div class="linha t-ferramenta tocavel" data-acao="editar-ferramenta" data-id="${esc(f.id)}">
             <div class="tipo-icone">${icone('ferramenta', { tamanho: 18 })}</div>
             <div class="corpo">
               <div class="nome">${esc(f.nome)}</div>
@@ -635,9 +636,9 @@ function modalFerramenta(id) {
     <label class="campo"><span>Nota</span><input id="f-nota" value="${esc(f?.nota || '')}" /></label>
     <div class="acoes-linha">
       <button class="btn sec" data-acao="fechar">Fechar</button>
-      ${f ? `<button class="btn perigo" data-acao="apagar-ferramenta" data-id="${f.id}">Apagar</button>` : ''}
+      ${f ? `<button class="btn perigo" data-acao="apagar-ferramenta" data-id="${esc(f.id)}">Apagar</button>` : ''}
     </div>
-    <div class="acoes-linha"><button class="btn largo" data-acao="guardar-ferramenta" data-id="${f?.id || ''}">Guardar</button></div>
+    <div class="acoes-linha"><button class="btn largo" data-acao="guardar-ferramenta" data-id="${esc(f?.id || '')}">Guardar</button></div>
   `);
 }
 
@@ -685,7 +686,7 @@ function registoParaFerramenta(id) {
 
 function vistaMais() {
   const { obra } = contexto();
-  const obras = db.obras.map((o) => `<option value="${o.id}" ${o.id === obra?.id ? 'selected' : ''}>${esc(o.nome)}</option>`).join('');
+  const obras = db.obras.map((o) => `<option value="${esc(o.id)}" ${o.id === obra?.id ? 'selected' : ''}>${esc(o.nome)}</option>`).join('');
   const totais = {
     registos: db.registos.length,
     encomendas: db.encomendas.length,
@@ -792,9 +793,9 @@ function vistaLocais() {
         ${locais
           .map(
             (l) => `
-          <button class="btn-mini" data-acao="usar-local" data-id="${l.id}" title="Usar este local">
+          <button class="btn-mini" data-acao="usar-local" data-id="${esc(l.id)}" title="Usar este local">
             ${esc((l.bloco ? 'Bloco ' + l.bloco + ' ' : '') + 'Piso ' + l.piso)}
-            <span data-acao="remover-local" data-id="${l.id}" style="margin-left:6px;color:var(--vermelho)">✕</span>
+            <span data-acao="remover-local" data-id="${esc(l.id)}" style="margin-left:6px;color:var(--vermelho)">✕</span>
           </button>`
           )
           .join('')}
@@ -821,7 +822,7 @@ function modalContexto() {
           ${[...porLote.entries()]
             .flatMap(([lote, locais]) =>
               locais.map(
-                (l) => `<button class="btn-mini ${l.id === db.ativo?.localId ? 'on' : ''}" data-acao="usar-local" data-id="${l.id}">
+                (l) => `<button class="btn-mini ${l.id === db.ativo?.localId ? 'on' : ''}" data-acao="usar-local" data-id="${esc(l.id)}">
                   ${esc((lote && lote !== '—' ? 'L' + lote + ' · ' : '') + (l.bloco ? 'B' + l.bloco + ' · ' : '') + 'P' + l.piso)}
                 </button>`
               )
@@ -897,6 +898,7 @@ function exportar() {
 }
 
 function importarFicheiro(ficheiro) {
+  if (!confirm('Substituir todos os dados pelo conteúdo desta cópia? O estado atual fica guardado numa cópia de segurança.')) return;
   const leitor = new FileReader();
   leitor.onload = () => {
     try {
@@ -905,7 +907,7 @@ function importarFicheiro(ficheiro) {
       render();
       toast('Cópia importada');
     } catch (erro) {
-      toast('Ficheiro inválido');
+      toast('Cópia não importada: ' + erro.message);
     }
   };
   leitor.readAsText(ficheiro);
@@ -955,7 +957,9 @@ document.addEventListener('change', (e) => {
     return;
   }
   if (e.target.id === 'fich-importar' && e.target.files && e.target.files[0]) {
-    importarFicheiro(e.target.files[0]);
+    const ficheiro = e.target.files[0];
+    e.target.value = ''; // para se poder voltar a escolher o mesmo ficheiro
+    importarFicheiro(ficheiro);
   }
   if (e.target.id === 'm-obra') {
     const obraId = e.target.value;
@@ -1115,9 +1119,51 @@ window.addEventListener('hashchange', navegar);
 
 // primeiro desenho
 if (!location.hash) location.hash = '#/hoje';
-navegar();
+try {
+  navegar();
+} catch (erro) {
+  console.error('Falha no primeiro desenho', erro);
+  $vista.innerHTML = '<div class="cartao"><h2>Não foi possível abrir</h2><p class="meta">Os dados guardados não foram apagados. Tenta recarregar a página.</p></div>';
+}
+if (store.avisoDeRecuperacao()) {
+  setTimeout(() => toast('Os dados estavam ilegíveis e foram guardados numa cópia de segurança.'), 400);
+}
+
+// pede ao browser para não apagar os dados por falta de espaço
+navigator.storage?.persist?.().catch(() => {});
 
 // service worker (só quando servido por https ou localhost)
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  let recarregarAoAtualizar = false;
+
+  const mostrarAtualizacao = (registo) => {
+    if (document.getElementById('aviso-atualizacao')) return;
+    const aviso = document.createElement('div');
+    aviso.id = 'aviso-atualizacao';
+    aviso.className = 'aviso-atualizacao';
+    aviso.setAttribute('role', 'status');
+    aviso.innerHTML = '<span>Nova versão disponível.</span><button class="btn-mini" type="button">Atualizar</button>';
+    aviso.querySelector('button').addEventListener('click', () => {
+      recarregarAoAtualizar = true;
+      registo.waiting?.postMessage('SKIP_WAITING');
+    });
+    document.body.append(aviso);
+  };
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (recarregarAoAtualizar) location.reload();
+  });
+
+  navigator.serviceWorker
+    .register('sw.js')
+    .then((registo) => {
+      if (registo.waiting && navigator.serviceWorker.controller) mostrarAtualizacao(registo);
+      registo.addEventListener('updatefound', () => {
+        const novo = registo.installing;
+        novo?.addEventListener('statechange', () => {
+          if (novo.state === 'installed' && navigator.serviceWorker.controller) mostrarAtualizacao(registo);
+        });
+      });
+    })
+    .catch(() => {});
 }
