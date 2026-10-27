@@ -3,6 +3,21 @@
 import { hojeISO } from './format.js';
 
 const CHAVE = 'caderno-obra-v1';
+const PREFIXO_COPIA = 'caderno-obra-v1-copia-';
+
+// chave da cópia criada no arranque quando os dados guardados estavam ilegíveis
+let avisoRecuperacao = null;
+// se não foi possível pôr a cópia de segurança, não se grava por cima dos dados originais
+let gravacaoBloqueada = false;
+let aoFalharGravacao = () => {};
+
+export function definirAvisoGravacao(fn) {
+  aoFalharGravacao = fn;
+}
+
+export function avisoDeRecuperacao() {
+  return avisoRecuperacao;
+}
 
 export function uid() {
   if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
@@ -23,56 +38,100 @@ export function estruturaVazia() {
   };
 }
 
-// Lavandeira: 2 lotes x 2 blocos x pisos -1..6 (do vault)
-export function semearLavandeira() {
-  const db = estruturaVazia();
-  const obra = {
-    id: uid(),
-    nome: 'Lavandeira',
-    morada: 'Em frente à Lavandeira',
-    cliente: '',
-    estado: 'Em andamento',
-    locais: []
-  };
-  for (const lote of ['1A', '3A']) {
-    for (const bloco of ['A', 'B']) {
-      for (const piso of ['-1', '1', '2', '3', '4', '5', '6']) {
-        obra.locais.push({ id: uid(), lote, bloco, piso });
+// ------------------------------------------------------------ validação
+
+const RE_ID = /^[A-Za-z0-9_-]{1,80}$/;
+const RE_CODIGO = /^[a-z_-]{0,30}$/;
+
+const ehId = (v) => typeof v === 'string' && RE_ID.test(v);
+const ehCodigo = (v) => typeof v === 'string' && RE_CODIGO.test(v);
+
+// devolve null se a base está bem formada, ou a descrição do primeiro problema encontrado
+export function problemaNaBase(db) {
+  if (!db || typeof db !== 'object') return 'não é um objeto';
+  if (db.v !== 1) return 'versão desconhecida';
+  if (!Array.isArray(db.obras)) return 'obras em falta';
+  for (const lista of [db.registos, db.encomendas, db.ferramentas]) {
+    if (lista !== undefined && !Array.isArray(lista)) return 'lista inválida';
+  }
+  for (const o of db.obras) {
+    if (!o || !ehId(o.id) || typeof o.nome !== 'string' || !Array.isArray(o.locais)) return 'obra inválida';
+    for (const l of o.locais) {
+      if (!l || !ehId(l.id) || typeof l.lote !== 'string' || typeof l.bloco !== 'string' || typeof l.piso !== 'string') {
+        return 'local inválido';
       }
     }
   }
-  db.obras.push(obra);
-  const primeiro = obra.locais.find((l) => l.lote === '1A' && l.bloco === 'A' && l.piso === '1');
-  db.ativo = { obraId: obra.id, localId: primeiro ? primeiro.id : obra.locais[0]?.id || null };
-  return db;
+  for (const r of db.registos || []) {
+    if (!r || !ehId(r.id) || !ehId(r.obraId) || !ehCodigo(r.tipo) || !ehCodigo(r.estado ?? '')) return 'registo inválido';
+    if (r.localId != null && !ehId(r.localId)) return 'registo com local inválido';
+  }
+  for (const e of db.encomendas || []) {
+    if (!e || !ehId(e.id) || !ehCodigo(e.estado) || !Array.isArray(e.itens)) return 'encomenda inválida';
+  }
+  for (const f of db.ferramentas || []) {
+    if (!f || !ehId(f.id)) return 'ferramenta inválida';
+  }
+  return null;
 }
 
-export function carregar() {
+// guarda um texto numa chave de cópia de segurança; devolve a chave ou null se falhar
+function guardarCopia(texto) {
+  const chave = PREFIXO_COPIA + Date.now();
   try {
-    const raw = localStorage.getItem(CHAVE);
-    if (!raw) {
-      const db = semearLavandeira();
-      guardar(db);
-      return db;
-    }
-    const db = JSON.parse(raw);
-    if (!db || db.v !== 1) return semearLavandeira();
-    db.obras ||= [];
-    db.registos ||= [];
-    db.encomendas ||= [];
-    db.ferramentas ||= [];
-    return db;
+    localStorage.setItem(chave, texto);
+    return chave;
   } catch (erro) {
-    console.error('Falha ao ler dados locais', erro);
-    return estruturaVazia();
+    console.error('Falha ao criar cópia de segurança', erro);
+    return null;
   }
 }
 
+// ------------------------------------------------------------ carregar e guardar
+
+export function carregar() {
+  let bruto = null;
+  try {
+    bruto = localStorage.getItem(CHAVE);
+  } catch (erro) {
+    console.error('Falha ao ler dados locais', erro);
+    gravacaoBloqueada = true;
+    return estruturaVazia();
+  }
+  // primeira utilização: sem dados de exemplo, a obra é criada pelo utilizador
+  if (bruto === null) return estruturaVazia();
+
+  let db = null;
+  try {
+    db = JSON.parse(bruto);
+  } catch {
+    db = null;
+  }
+  const problema = problemaNaBase(db);
+  if (problema) {
+    console.error('Dados locais ilegíveis: ' + problema);
+    avisoRecuperacao = guardarCopia(bruto);
+    gravacaoBloqueada = avisoRecuperacao === null;
+    return estruturaVazia();
+  }
+  db.registos ||= [];
+  db.encomendas ||= [];
+  db.ferramentas ||= [];
+  return db;
+}
+
 export function guardar(db) {
+  if (gravacaoBloqueada) {
+    aoFalharGravacao();
+    return false;
+  }
   try {
     localStorage.setItem(CHAVE, JSON.stringify(db));
+    return true;
   } catch (erro) {
     console.error('Falha ao guardar', erro);
+    aoFalharGravacao();
+    return false;
   }
 }
 
@@ -240,6 +299,7 @@ export function criarEncomenda(db, { obraId, localId, data, itens, texto }) {
       qtd: i.qtd,
       unidade: i.unidade,
       familia: i.familia,
+      localId: i.localId ?? null,
       qtdExplicita: i.qtdExplicita
     }))
   };
@@ -305,12 +365,23 @@ export function exportarJSON(db) {
 }
 
 export function importarJSON(texto) {
-  const db = JSON.parse(texto);
-  if (!db || !Array.isArray(db.obras)) throw new Error('Ficheiro não parece um caderno de obra.');
-  db.v = 1;
+  let db = null;
+  try {
+    db = JSON.parse(texto);
+  } catch {
+    throw new Error('o ficheiro não é JSON válido');
+  }
+  const problema = problemaNaBase(db);
+  if (problema) throw new Error('não parece um caderno de obra (' + problema + ')');
+
+  // o estado atual fica numa cópia antes de ser substituído
+  const atual = localStorage.getItem(CHAVE);
+  if (atual !== null && guardarCopia(atual) === null) {
+    throw new Error('não foi possível criar a cópia de segurança');
+  }
   db.registos ||= [];
   db.encomendas ||= [];
   db.ferramentas ||= [];
-  guardar(db);
+  if (!guardar(db)) throw new Error('não foi possível gravar os dados importados');
   return db;
 }

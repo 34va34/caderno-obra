@@ -56,7 +56,9 @@ export function textoEncomenda({ obra, local, data, itens }) {
   const lista = (itens || []).filter(Boolean);
   if (!lista.length) return '';
 
-  const locais = new Set(lista.map((i) => fmtLocal(i.local || local)).filter(Boolean));
+  // cada item traz o seu local (i.local); sem ele, usa o local ativo
+  const localDoItem = (i) => fmtLocal(i.local || local);
+  const locais = new Set(lista.map(localDoItem).filter(Boolean));
   const linhas = [];
 
   const cabecalho = [obra || 'Obra'];
@@ -86,7 +88,9 @@ export function textoEncomenda({ obra, local, data, itens }) {
       const qtd = item.qtdExplicita === false && (!item.qtd || item.qtd === 1)
         ? ''
         : ` — ${fmtQtd(item.qtd, item.unidade)}`;
-      linhas.push(`- ${nome}${qtd}`);
+      // com itens de locais diferentes, cada linha diz onde é preciso
+      const onde = locais.size > 1 && localDoItem(item) ? ` (${localDoItem(item)})` : '';
+      linhas.push(`- ${nome}${qtd}${onde}`);
     }
     linhas.push('');
   }

@@ -1,5 +1,7 @@
 // Service worker: guarda a app no telemovel para abrir sem internet.
-const CACHE = 'caderno-obra-v2';
+// Estratégia: responde logo com a cópia guardada e atualiza-a em segundo plano.
+// Uma nova versão só entra quando o utilizador aceita (mensagem SKIP_WAITING vinda da app).
+const CACHE = 'caderno-obra-v3';
 const FICHEIROS = [
   './',
   './index.html',
@@ -16,7 +18,11 @@ const FICHEIROS = [
 ];
 
 self.addEventListener('install', (evento) => {
-  evento.waitUntil(caches.open(CACHE).then((c) => c.addAll(FICHEIROS)).then(() => self.skipWaiting()));
+  evento.waitUntil(caches.open(CACHE).then((c) => c.addAll(FICHEIROS)));
+});
+
+self.addEventListener('message', (evento) => {
+  if (evento.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (evento) => {
@@ -31,17 +37,25 @@ self.addEventListener('activate', (evento) => {
 self.addEventListener('fetch', (evento) => {
   const pedido = evento.request;
   if (pedido.method !== 'GET') return;
+  if (new URL(pedido.url).origin !== self.location.origin) return;
+
+  const navegacao = pedido.mode === 'navigate';
   evento.respondWith(
-    caches.match(pedido).then(
-      (guardado) =>
-        guardado ||
-        fetch(pedido)
-          .then((resposta) => {
-            const copia = resposta.clone();
-            caches.open(CACHE).then((c) => c.put(pedido, copia)).catch(() => {});
-            return resposta;
-          })
-          .catch(() => caches.match('./index.html'))
-    )
+    caches.match(navegacao ? './index.html' : pedido, { ignoreSearch: true }).then((guardado) => {
+      const rede = fetch(pedido).then((resposta) => {
+        // só se guarda respostas completas e bem-sucedidas (nem 404, nem 206)
+        if (resposta.status === 200 && resposta.type === 'basic') {
+          caches.open(CACHE).then((c) => c.put(pedido, resposta.clone())).catch(() => {});
+        }
+        return resposta;
+      });
+
+      if (guardado) {
+        rede.catch(() => {});
+        return guardado;
+      }
+      // sem cópia: navegações caem no index.html; recursos em falta ficam em falta
+      return rede.catch(() => (navegacao ? caches.match('./index.html') : Response.error()));
+    })
   );
 });
