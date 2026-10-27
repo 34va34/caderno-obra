@@ -30,7 +30,10 @@ export function normalizar(t) {
 }
 
 export function numero(s) {
-  const n = parseFloat(String(s).replace(',', '.'));
+  // "1.234,50": ponto de milhares e vírgula decimal; sem vírgula, o ponto é decimal
+  const texto = String(s);
+  const limpo = texto.includes(',') ? texto.replace(/\./g, '').replace(',', '.') : texto;
+  const n = parseFloat(limpo);
   return Number.isFinite(n) ? n : null;
 }
 
@@ -141,7 +144,7 @@ export function baseDoNome(nome) {
 
 const RE_FERRAMENTA = /\b(ferramenta|ferramentas|maq|maqs|maquina|maquinas|polifusora|holefusora|eletrossolda|furadeira|berbequim|martelo|nivel|emprestei|emprestou|emprestada|emprestado|perdi|perdeu|desapareceu|sumiu|roubaram|desviou|devolvi|devolvida|quebrou|avariou)\b/;
 const RE_GASTO = /\b(usei|usamos|usei ja|gastei|gastou|gastamos|consumi|consumimos|apliquei|aplicamos|levou|levamos|meti|metemos)\b/;
-const RE_PRECISO = /\b(falta|faltam|acabou|acabaram|acabouse|preciso de|precisa de|pedir|pede|encomendar|encomenda de|manda|mandar)\b/;
+const RE_PRECISO = /\b(falta|faltam|acabou|acabaram|acabouse|preciso de|precisa de|pedir|pede|encomendar|encomenda de|manda|mandar|preciso(?=\s+\d))\b/;
 const RE_TAREFA = /\b(tarefa|iniciar|iniciei|comecar|comecei|comecamos|fazer|fiz|tem de|e preciso|arranjar|corrigir|trocar|montar|acabar|terminar|verificar|vistoria|limpar|desentupir)\b/;
 
 export function detectarTipo(texto) {
@@ -178,6 +181,8 @@ const RE_NUM_TRAIL = /(\d+(?:[.,]\d+)?)\s*$/;
 const RE_LEAD_MULT = /^\s*(\d+)\s*[x×]\s+/i;
 // um numero no fim precedido de ppr/pvc/dn/Ø e diametro, nao quantidade
 const RE_ANTES_DIAMETRO = /(?:ppr|pvc|dn|Ø|ø|\/)\s*$/i;
+// diâmetros e ângulos típicos que, sem unidade, não são quantidade
+const MEDIDAS_TECNICAS = new Set([16, 20, 25, 32, 40, 45, 50, 63, 75, 87, 88, 90, 110, 125, 160, 200, 250, 315]);
 
 // mascara especificacoes tecnicas mantendo o comprimento, para nao as cortar do nome
 function mascarar(str) {
@@ -217,7 +222,8 @@ export function extrairQuantidade(corpo) {
         unidade = UNIDADES[normalizar(unidMeio[2])] || 'un';
       } else {
         const numTrail = mask.match(RE_NUM_TRAIL);
-        if (numTrail && !RE_ANTES_DIAMETRO.test(mask.slice(0, numTrail.index))) {
+        // diâmetros e ângulos comuns ("curva 90", "ralo 110") não são quantidades
+        if (numTrail && !MEDIDAS_TECNICAS.has(numero(numTrail[1])) && !RE_ANTES_DIAMETRO.test(mask.slice(0, numTrail.index))) {
           ini = numTrail.index;
           fim = numTrail.index + numTrail[0].length;
           qtd = numero(numTrail[1]);
@@ -242,6 +248,8 @@ export function extrairQuantidade(corpo) {
 // ---------------------------------------------------------------- cotas
 
 const RE_COTA = /(\d+(?:[.,]\d+)?)\s*(cm|mm|metros?|mts?|m)\b(?:\s*(?:d[oa]s?|à|ao|ate|até|entre)\s+([^,;.\n]{2,40}))?/gi;
+// uma cota só conta se a referência for um ponto de obra conhecido ("do pronto", "da parede")
+const RE_REF_CONHECIDA = /\b(pronto|chao|prumo|parede|teto|tecto|eixo|pilar|viga|laje|tabique|alinhamento|porta|janela|ralo|tomada|caixa|ponto)\b/;
 
 export function normalizarReferencia(ref) {
   const n = normalizar(ref);
@@ -260,7 +268,7 @@ export function extrairCotas(texto) {
   while ((m = RE_COTA.exec(t)) !== null) {
     const unidade = UNIDADES_COMPRIMENTO[normalizar(m[2])];
     const refBruta = (m[3] || '').trim();
-    if (!unidade || !refBruta) continue;
+    if (!unidade || !refBruta || !RE_REF_CONHECIDA.test(normalizar(refBruta))) continue;
     out.push({
       valor: numero(m[1]),
       unidade,

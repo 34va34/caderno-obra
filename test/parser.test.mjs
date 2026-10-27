@@ -1,5 +1,4 @@
 // Testes das regras de captura (parser.js). Funções puras, sem DOM.
-// Os casos marcados com `todo` são bugs conhecidos: são executados e reportados, mas não falham o npm test.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -33,7 +32,7 @@ test('numero: vírgula decimal e valores inválidos', () => {
   assert.equal(numero('abc'), null);
 });
 
-test('numero: milhares com ponto e decimal com vírgula', { todo: 'numero() lê 1.234,50 como 1.234 (falta tratar o separador de milhares)' }, () => {
+test('numero: milhares com ponto e decimal com vírgula', () => {
   assert.equal(numero('1.234,50'), 1234.5);
 });
 
@@ -53,11 +52,11 @@ test('detectarTipo: gasto, preciso, tarefa e nota', () => {
   assert.equal(detectarTipo('chuva forte hoje'), 'nota');
 });
 
-test('detectarTipo: "preciso 10 curvas" sem "de" é preciso', { todo: 'RE_PRECISO exige "preciso de"; "preciso 10 curvas" cai em nota' }, () => {
+test('detectarTipo: "preciso 10 curvas" sem "de" é preciso', () => {
   assert.equal(detectarTipo('preciso 10 curvas'), 'preciso');
 });
 
-test('detectarTipo: "é preciso 20 tubos" é preciso, não tarefa', { todo: 'RE_TAREFA apanha "e preciso" antes de RE_PRECISO' }, () => {
+test('detectarTipo: "é preciso 20 tubos" é preciso, não tarefa', () => {
   assert.equal(detectarTipo('é preciso 20 tubos'), 'preciso');
 });
 
@@ -113,8 +112,11 @@ test('extrairQuantidade: valores vazios', () => {
   assert.deepEqual(extrairQuantidade(''), { qtd: null, unidade: 'un', resto: '' });
 });
 
-test('extrairQuantidade: número no fim sem unidade é quantidade', { todo: 'um número final sem diâmetro é lido como quantidade ("curva 90" dá qtd 90)' }, () => {
+test('extrairQuantidade: número no fim sem unidade é quantidade, exceto diâmetros e ângulos', () => {
+  assert.equal(extrairQuantidade('cimento 3').qtd, 3);
   assert.equal(extrairQuantidade('curva 90').qtd, null);
+  assert.equal(extrairQuantidade('joelho 45').qtd, null);
+  assert.equal(extrairQuantidade('ralo 110').qtd, null);
 });
 
 // ------------------------------------------------------------ cotas
@@ -137,7 +139,7 @@ test('extrairCotas: sem referência explícita não é cota', () => {
   assert.deepEqual(extrairCotas('falta 45 cm de tubo'), []);
 });
 
-test('extrairCotas: quantidade com "do" não é cota', { todo: 'RE_COTA trata "falta 20 m do tubo" como cota com referência "tubo"' }, () => {
+test('extrairCotas: quantidade com "do" não é cota', () => {
   assert.deepEqual(extrairCotas('falta 20 m do tubo'), []);
 });
 
@@ -284,7 +286,7 @@ test('parseLinha: "curva PPR 90" sem unidade não gera quantidade 90', () => {
   assert.equal(r.qtdExplicita, false);
 });
 
-test('parseLinha: "falta 20 m do tubo" deve ser quantidade e não cota', { todo: 'o caso de cota com "do" também afeta o parseLinha' }, () => {
+test('parseLinha: "falta 20 m do tubo" deve ser quantidade e não cota', () => {
   const r = parseLinha('falta 20 m do tubo');
   assert.equal(r.cotas.length, 0);
   assert.equal(r.qtd, 20);
